@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>
+      How a Java Programmer Wrote Console Tetris In Haskell And What The Learning Curve Was Like
+    </title>
+
+    <script type="text/javascript" src="js/showdown-1.9.1.min.js"></script>
+    <script type="text/javascript" src="js/comments.js"></script>
+
+    <link rel="stylesheet" href="css/page-style.css">
+    <link rel="stylesheet" href="css/comments.css">
+
+  </head>
+  <body>
+    <div class="main-wrapper">
+
+      <h2 class="centered">
+      How a Java Programmer Wrote Console Tetris In Haskell
+      </h2>
+      <h3 class="centered">
+      And What The Learning Curve Was Like
+      </h2>
+
+      <p>
+<a href="#intro">Introduction</a>
+<br/>
+<a href="#project-structure">Project structure</a>
+<br/>
+<a href="#concurrency">Concurrency</a>
+<br/>
+<a href="#conclusions">Conclusions</a>
+<br/>
+<a href="#whats-next">What's next?</a>
+      </p>
+      <p class="centered grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </p>
+      <p class="centered">
+TL;DR
+      </p>
+
+      <p>
+Java version repo: https://github.com/shiraeeshi/jtetr-first
+<br/>
+Haskell version repo: https://github.com/shiraeeshi/hstetr-first
+<br/>
+- <code>master</code> branch - single-threaded version
+<br/>
+- <code>recursive-handle-tetris-commands</code> - version with channels and the cycle is started using recursive function
+<br/>
+- <code>chan</code> branch - version with channels and the cycle is initiated using <code>fold</code>
+      </p>
+
+      <p class="grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </p>
+
+      <p>
+Introduction
+      </p>
+      <p>
+An article http://eed3si9n.com/console-games-in-scala
+<br/>
+ - describes control sequences that allow to print in any arbitrary location on the screen, rather than in line-by-line manner
+<br/>
+ - describes how to read arrow button press events
+      </p>
+      <p>
+decided to implement in haskell, wrote some preliminary code that reads arrow button presses from console, didn't know how to write tetris in functional style, came across a comment about fs2, been reading about iteratee, postponed tetris, lost preliminary code.
+      </p>
+      <p>
+have read a book "Learn you a haskell for great good" (LYAH)
+      </p>
+      <p>
+an idea was suggested to write tetris, implemented it in java, then decided to translate it to haskell.
+      </p>
+
+      <p class="grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </p>
+      <p>
+Project structure
+      </p>
+
+      <p>
+<code>figure</code>, <code>arena</code>, <code>ConsoleView</code>, <code>main</code>
+      </p>
+
+      <p>
+a figure is implemented as an immutable structure, instead of rewriting a field value returns another version of itself.
+      </p>
+
+      <p>
+an arena stores playing field cells and a figure.
+      </p>
+
+      <p>
+a <code>ConsoleView</code> prints an arena to the console.
+      </p>
+
+      <p>
+<code>main</code> glues everything together: reading of input symbols, reaction to commands, showing an arena, starting and stopping a timer.
+      </p>
+
+      <p>
+first implemented without a timer, and after that added a timer and concurrency.
+      </p>
+
+      <p class="grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </p>
+      <p>
+Concurrency
+      </p>
+
+      <p>
+there is a channel (concurrent queue)
+<br/>
+a timer sends a "tick" command to the channel
+<br/>
+a recursive <code>keys2commands</code> function translates read symbols into commands, which it then sends to channel
+<br/>
+some function reads commands from the channel and passes them to the <code>handleTetrisCommand</code> function which reacts to them
+<br/>
+<code>handleTetrisCommand</code> receives game state and a command as an input, shows an arena and returns the next state of a game
+      </p>
+
+      <p>
+two ways of repeatedly invoking <code>handleTetrisCommand</code>:
+<br/>
+ - using recursive function
+<br/>
+ - using <code>foldM</code>
+      </p>
+
+      <p>
+when <code>handleTetrisCommand</code> is invoked by <code>foldM</code>, it works because lists are lazy in haskell
+      </p>
+
+      <p class="grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </p>
+      <p>
+Conclusions
+
+<br/>
+<br/>
+specific and abstract
+<br/>
+haskell is not as strictly functional as I thought
+      </p>
+
+      <p class="grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </p>
+      <p>
+What's next?
+      </p>
+
+      <p>
+what part of code is pure functional and what part is not pure?
+      </p>
+
+      <p>
+exit game functionality is not implemented yet, one way of exiting game is through interrupting the console
+      </p>
+      <p>
+optimize changing values in cells matrix
+      </p>
+      <p>
+how to introduce more functional stuff into code, like monads, monad transformers, etc.?
+      </p>
+
+      <p class="centered">
+      <a name="intro" class="inner-anchor grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </a>
+      </p>
+
+      <p class="centered">
+Introduction
+      </p>
+
+      <p>
+There's a tradition to print Hello World to the console when beginning learning a language. Let's call printing Hello World to the console a first level of interactivity. A next level is when a program gets an input from a user and prints the result to the console. Sounds similar to the way functions work.
+      </p>
+
+      <p>
+One of the merits of a functional style is said to be the fact that functions don't produce side effects. Side effects have the potential to over-complicate the code, making it resemble a bowl of spagetti (it is called spagetti-code), and unwanted side effects are errors, bugs. When we use functions, we don't have side effects, so from the beginning we eliminate the possibility of introducing an unwanted side effect into the code.
+      </p>
+
+      <p>
+Sounds convincing, but what does it look like in practice when we're dealing with something more sophisticated than Hello World or a console calculator?
+      </p>
+
+      <p>
+We want to write something complex and intertwined in functional style and check if spagetti is going to get untangled because we used functions, and if so, what will it look like?
+      </p>
+
+      <p>
+Are we going to write some UI or a server, or maybe an operation system kernel? It would be too far of a jump on a learning curve, which seems to be pretty steep in haskell's case. We got to flatten the learning curve.
+      </p>
+      <p>
+It's got to be console application. But here is a thing: how are we going to test if functions help us untangle the code, given that console works similar to functions in line-by-line input-output mode?
+      </p>
+
+      <p>
+This article helps us resolve the problem: http://eed3si9n.com/console-games-in-scala
+      </p>
+      <p>
+It describes:
+<br/>
+ - control sequences of symbols that let us print in any location on screen, rather than line by line.
+<br/>
+ - how to read arrow button pressed events.
+      </p>
+
+      <p>
+In this way it's possible to use console on a higher level of interactivity.
+      </p>
+
+      <p>
+After having read the article, I decided to translate the code to haskell, wrote some preliminary code that reads arrow button presses from console, and reacts to them by moving a figure on a screen.
+      </p>
+      <p>
+An article proceeds by adding a code that periodically prints some text. The program's flow got divided into several threads working concurrently. I didn't know how to write something like that in haskell. The learning curve jumped high and became a wall in front of me. Actually it was me who made things more complicated, because I've been searching in the wrong place.
+      </p>
+      <p>
+In the comment to an article someone mentioned fs2 library, I started searching it's equivalent for haskell and reading about the library. I've read in some discussion that the library consists of a set of instruments and there are various options of how to use each of them, developers have coded some of the options, but there are too many combinations of instruments and options to code each one, come up with a name for it, describe it in a documentation and make users memorise all the names. That strange situation discouraged me from using the library.
+      </p>
+
+      <p>
+I kept the preliminary code only on hard disk, never uploaded it to any kind of cloud, and it so happened that it was lost. Perhaps you need to upload code into repos on cloud, even if it's just some draft code you are playing with. Sometimes such little things determine whether you keep progressing or procractinating.
+      </p>
+
+      <p>
+Later I came across an idea of iteratees and got an impression that they are related to a functional style.
+      </p>
+      <p>
+Iteratees were implemented in haskell first, and then were adopted in other languages.
+      </p>
+      <p>
+In search results I saw links to articles about iteratees on scala, skimmed through it, but I wanted to get the knowledge from the root, so to speak. I needed articles about iteratees on haskell.
+I followed the link from the wikipedia article to an article in "The Monad Reader" journal. "Iteratee: Teaching an Old Fold New Tricks" by John W. Lato ( https://themonadreader.wordpress.com/2010/05/12/issue-16 ).
+      </p>
+      <p>
+In that article the author created a data type, created Monad, Applicative and Functor instances for the data type and suggested to figure out the flow of execution of one method (&gt;&gt;=) as an exercise. I tried to do that, got lost in intricacies of function invokations and now iteratees seem to me like something complicated and tricky. Are newbie's brains too OOP to understand that stuff or maybe that article is a little too advanced? I think I was lucky enough to bump into the wrong article.
+      </p>
+
+      <p>
+Are exercices a good or a bad thing? They are a good thing if you know how to use them as a tool. They are bad when the inner perfectionist refuses to continue with the job until the exercise is done, but doesn't want to do the exercise.
+      </p>
+
+      <p>
+This dead-end branch of learning ended by me switching focus to scala because of an interview. Just a vague feeling remained that I wanted to write tetris on haskell and didn't know how to do that; that in order to do that I needed to understand how iteratees work and finish a hard and confusing exercise. Haskell is so hard to learn! In fact, I didn't even need iteratees to write tetris. This is an example of how the wrong strategy of learning can lead to a dead end and demotivate. Seems like being able to simplify the task at hand is a skill too, and you need to learn and train yourself to simplify things.
+      </p>
+
+      <p>
+Have read the "Learn you a haskell for great good" (LYAH) book. An easy to read, engaging and interesting book.
+      </p>
+      <p>
+I heard that there aren't much books and articles like that in haskell world. Maybe I'm just not very skilled in finding good articles. Do readers have any recommendations?
+      </p>
+
+      <p>
+I decided to take a break from anything related to programming, later I started reading books to refresh memory, but didn't code because I could not come up with any project idea, all ideas seemed boring, not interesting enough to start coding.
+      </p>
+
+      <p>
+In some programming-related community in the comment section someone asked about things he can do to get the feeling of what programming is like and to understand whether he likes it or not. Someone answered and mentioned among other things doing a lot of small projects to practice. I commented and described my situation, that I resort to just reading books about programming and don't code, I want to use in practice the concepts I'm reading about, but can't come up with an idea interesting enough. They gave several examples of small project ideas, and the tetris was one of them. The idea of writing tetris didn't seem very interesting to me at that time, but I decided to write it anyway, not to end up as someone who asks to list ideas and then does nothing. I've been reading about concurrency in java, so I decided to use that language. Surprisingly the idea that seemed boring and not worth coding became interesting when an open editor appeared on the screen. I've coded tetris on java in three coding sessions giving in total about nine hours. This experience showed that sometimes it makes sense to start doing something that seems uninteresting, sometimes things become interesting after you start doing something and until you start they seem boring. It may seem to you that you don't want to do something, that you will spend time struggling with boredom and lack of motivation, but sometimes it only seems that way. Another conclusion is that sometimes an open editor makes things more interesting than speculative ideas. Sometimes interactive things are more interesting than hypothetical ideas.
+      </p>
+
+      <p>
+So, somebody suggested an idea to write tetris, I implemented it in java, then decided to translate it to haskell.
+      </p>
+
+      <p>
+Java version repo: https://github.com/shiraeeshi/jtetr-first
+<br/>
+Haskell version repo: https://github.com/shiraeeshi/hstetr-first
+      </p>
+
+      <p>
+Speaking in terms of MVC, I translated a model and a view from java, and wrote haskell version of a controller from scratch.
+<br/>
+When writing a model and a view, I didn't know how to write a controller logic. Decided to code what I can, and later things will become more clear.
+<br/>
+What is the name of such an upproach to design, "bottom up" or "from specific to abstract"?
+      </p>
+
+      <p>
+When you don't know what to do, one approach is to build an infractructure first, build peripheral things and then try various combinations and think about how to tie them together.
+<br/>
+Sounds like going from periphery to the center. That's one approach. Another is the opposite: going from center to periphery, or top-to-bottom.
+      </p>
+
+      <p class="centered">
+      <a name="project-structure" class="inner-anchor grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </a>
+      </p>
+
+      <p class="centered">
+Project structure
+      </p>
+
+      <p>
+The program consists of several modules: <code>Figure</code>, <code>Arena</code>, <code>ConsoleView</code>, <code>Main</code>.
+      </p>
+
+      <p>
+A figure is implemented as an immutable structure, instead of rewriting a field value it returns another version of itself.
+      </p>
+
+      <p>
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #006699; font-weight: bold">data</span> <span style="color: #007788; font-weight: bold">Figure</span>
+  <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">IShape</span> {center <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span>, isVertical <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Bool</span>}
+  <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">JShape</span> {center <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span>, direction <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Direction</span>}
+  <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">LShape</span> {center <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span>, direction <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Direction</span>} 
+  <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">OShape</span> {center <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span>} 
+  <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">SShape</span> {center <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span>, isVertical <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Bool</span>} 
+  <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">TShape</span> {center <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span>, direction <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Direction</span>} 
+  <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">ZShape</span> {center <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span>, isVertical <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Bool</span>}
+</pre></div>
+
+
+      <p>
+An arena stores playing field cells and a figure.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #006699; font-weight: bold">data</span> <span style="color: #007788; font-weight: bold">Arena</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">Arena</span> {figure <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Figure</span>, cells <span style="color: #000000; font-weight: bold">::</span> [[<span style="color: #007788; font-weight: bold">Bool</span>]], width <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Int</span>, height <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Int</span>}
+</pre></div>
+
+
+      <p>
+A <code>ConsoleView</code> prints an arena to the console.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">printArena</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Int</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Int</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Arena</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">IO</span> <span style="color: #336666">()</span>
+<span style="color: #CC00FF">printArena</span> arenaWidth arenaHeight arena <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  saveCursor
+  clearScreen
+  drawBox <span style="color: #FF6600">0</span> <span style="color: #FF6600">0</span> (arenaWidth <span style="color: #555555">+</span> <span style="color: #FF6600">2</span>) (arenaHeight <span style="color: #555555">+</span> <span style="color: #FF6600">2</span>)
+  drawFigure arenaHeight (figure arena) 
+  drawBricks arenaHeight (getBricksOnTheFloor arena)
+  when (hasFullRows arena) (drawFullRows arenaWidth arenaHeight <span style="color: #555555">.</span> findFullRowsIndices <span style="color: #555555">$</span> arena)
+</pre></div>
+
+
+      <p>
+A figure uses <code>Point</code> and <code>Direction</code>.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #006699; font-weight: bold">type</span> <span style="color: #007788; font-weight: bold">Point</span> <span style="color: #000000; font-weight: bold">=</span> (<span style="color: #007788; font-weight: bold">Int</span>, <span style="color: #007788; font-weight: bold">Int</span>)
+
+<span style="color: #006699; font-weight: bold">data</span> <span style="color: #007788; font-weight: bold">Direction</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">ToLeft</span> <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">ToRight</span> <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">ToUp</span> <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">ToDown</span>
+</pre></div>
+
+
+      <p>
+<code>Point</code> is a type alias representing a pair of numbers
+      </p>
+
+      <p>
+Figures can be moved around and rotated.
+<br/>
+How does figure return another version of itself when mutated while being immutable?
+<br/>
+Let's start with functions that determine neighbors of a point.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">neighborLeft</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Point</span>
+<span style="color: #CC00FF">neighborLeft</span> (x, y) <span style="color: #000000; font-weight: bold">=</span> (x <span style="color: #555555">-</span> <span style="color: #FF6600">1</span>, y)
+
+<span style="color: #CC00FF">neighborRight</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Point</span>
+<span style="color: #CC00FF">neighborRight</span> (x, y) <span style="color: #000000; font-weight: bold">=</span> (x <span style="color: #555555">+</span> <span style="color: #FF6600">1</span>, y)
+
+<span style="color: #CC00FF">neighborAbove</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Point</span>
+<span style="color: #CC00FF">neighborAbove</span> (x, y) <span style="color: #000000; font-weight: bold">=</span> (x, y <span style="color: #555555">+</span> <span style="color: #FF6600">1</span>)
+
+<span style="color: #CC00FF">neighborBelow</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Point</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Point</span>
+<span style="color: #CC00FF">neighborBelow</span> (x, y) <span style="color: #000000; font-weight: bold">=</span> (x, y <span style="color: #555555">-</span> <span style="color: #FF6600">1</span>)
+</pre></div>
+
+
+      <p>
+A pair of numbers is an immutable structure, it means that instead of changing anything in the original point we return a new point with a new value.
+      </p>
+
+      <p>
+Those functions get called by functions that operate on figure, for example <code>moveLeft</code>:
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">moveLeft</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Figure</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Figure</span>
+<span style="color: #CC00FF">moveLeft</span> (<span style="color: #007788; font-weight: bold">IShape</span> center isVertical) <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">IShape</span> (neighborLeft center) isVertical
+<span style="color: #CC00FF">moveLeft</span> (<span style="color: #007788; font-weight: bold">JShape</span> center direction) <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">JShape</span> (neighborLeft center) direction
+<span style="color: #CC00FF">moveLeft</span> (<span style="color: #007788; font-weight: bold">LShape</span> center direction) <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">LShape</span> (neighborLeft center) direction
+<span style="color: #CC00FF">moveLeft</span> (<span style="color: #007788; font-weight: bold">OShape</span> center) <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">OShape</span> (neighborLeft center)
+<span style="color: #CC00FF">moveLeft</span> (<span style="color: #007788; font-weight: bold">SShape</span> center isVertical) <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">SShape</span> (neighborLeft center) isVertical
+<span style="color: #CC00FF">moveLeft</span> (<span style="color: #007788; font-weight: bold">TShape</span> center direction) <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">TShape</span> (neighborLeft center) direction
+<span style="color: #CC00FF">moveLeft</span> (<span style="color: #007788; font-weight: bold">ZShape</span> center isVertical) <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">ZShape</span> (neighborLeft center) isVertical
+</pre></div>
+
+
+      <p>
+They work the same way as functions that find a point's neighbors: instead of changing anything in the original figure thay return a new figure with a new center.
+      </p>
+
+      <p>
+Now let's move on to the function <code>moveCurrentFigureLeft</code> from the <code>Arena</code> module. This function's behaviour depends on game state: if a figure can be moved to the left, then this function returns a new arena (which stores a new figure with a new center), and if a figure can't be moved because of an obstacle, the function returns the original arena unchanged. The function <code>setFigureIfPossible</code> returns an arena paired with a boolean indicator that says whether the function changed a figure or not.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">moveCurrentFigureLeft</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Arena</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Arena</span>
+<span style="color: #CC00FF">moveCurrentFigureLeft</span> arena <span style="color: #000000; font-weight: bold">=</span> fst <span style="color: #555555">$</span> setFigureIfPossible (moveLeft (figure arena)) arena
+
+<span style="color: #CC00FF">setFigureIfPossible</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Figure</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Arena</span> <span style="color: #000000; font-weight: bold">-&gt;</span> (<span style="color: #007788; font-weight: bold">Arena</span>, <span style="color: #007788; font-weight: bold">Bool</span>)
+<span style="color: #CC00FF">setFigureIfPossible</span> figure arena <span style="color: #000000; font-weight: bold">=</span>
+  <span style="color: #006699; font-weight: bold">if</span> figureIsPossible figure arena
+  <span style="color: #006699; font-weight: bold">then</span> <span style="color: #006699; font-weight: bold">let</span> newArena <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">Arena</span> figure (cells arena) (width arena) (height arena)
+       <span style="color: #006699; font-weight: bold">in</span> (newArena, <span style="color: #007788; font-weight: bold">True</span>)
+  <span style="color: #006699; font-weight: bold">else</span> (arena, <span style="color: #007788; font-weight: bold">False</span>)
+</pre></div>
+
+
+      <p>
+The <code>Main</code> module glues everything together: reading of input symbols, reaction to commands, showing an arena, starting and stopping a timer.
+      </p>
+
+      <p>
+A figure in tetris descends periodically, let's say some timer makes a figure descend.
+<br/>
+I've implemented a version without a timer first, because without a timer you can write single-threaded code with no concurrency.
+      </p>
+
+      <p>
+Let's first examine the earlier version without a timer.
+      </p>
+
+      <p>
+Reading input symbols (from https://stackoverflow.com/a/38553473/8569383)
+<br/>
+Depends on console's buffering (<code>hSetBuffering stdin NoBuffering</code>) and echo (<code>hSetEcho stdin False</code>) settings.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">getKey</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">IO</span> [<span style="color: #007788; font-weight: bold">Char</span>]
+<span style="color: #CC00FF">getKey</span> <span style="color: #000000; font-weight: bold">=</span> reverse <span style="color: #555555">&lt;$&gt;</span> getKey&#39; <span style="color: #CC3300">&quot;&quot;</span>
+  <span style="color: #006699; font-weight: bold">where</span>
+  getKey&#39; chars <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+    char <span style="color: #000000; font-weight: bold">&lt;-</span> getChar
+    more <span style="color: #000000; font-weight: bold">&lt;-</span> hReady stdin
+    (<span style="color: #006699; font-weight: bold">if</span> more <span style="color: #006699; font-weight: bold">then</span> getKey&#39; <span style="color: #006699; font-weight: bold">else</span> return) (char<span style="color: #007788; font-weight: bold">:</span>chars)
+</pre></div>
+
+
+      <p>
+Reacting to commands.
+      </p>
+
+      <p>
+In an earlier version of a module reaction to commands is implemented in <code>withArena</code> function.
+<br/>
+This function shows an arena, reads button presses and recursively calls itself passing a new arena as a parameter.
+<br/>
+(<code>Level</code> is utility module for generating new figures through invoking <code>nextFigure</code>).
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">withArena</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Level</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Arena</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">IO</span> <span style="color: #336666">()</span>
+<span style="color: #CC00FF">withArena</span> level arena <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> arena
+  key <span style="color: #000000; font-weight: bold">&lt;-</span> getKey
+  when (key <span style="color: #555555">/=</span> <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">&quot;</span>) <span style="color: #555555">$</span> <span style="color: #006699; font-weight: bold">do</span>
+    <span style="color: #006699; font-weight: bold">case</span> key <span style="color: #006699; font-weight: bold">of</span>
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[A&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- up</span>
+        withArena level (rotateCurrentFigureClockwise arena)
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[B&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- down</span>
+        <span style="color: #006699; font-weight: bold">let</span> (newArena, descended) <span style="color: #000000; font-weight: bold">=</span> descendCurrentFigure arena
+        <span style="color: #006699; font-weight: bold">if</span> descended
+        <span style="color: #006699; font-weight: bold">then</span> withArena level newArena
+        <span style="color: #006699; font-weight: bold">else</span> <span style="color: #006699; font-weight: bold">do</span>
+          <span style="color: #006699; font-weight: bold">let</span>
+            fixedFigureArena <span style="color: #000000; font-weight: bold">=</span> fixCurrentFigure newArena
+            (newFigure, newLevel) <span style="color: #000000; font-weight: bold">=</span> nextFigure level
+            newFigureArena <span style="color: #000000; font-weight: bold">=</span> fst <span style="color: #555555">$</span> setFigureIfPossible newFigure fixedFigureArena
+          withArena newLevel newFigureArena
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[C&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- right</span>
+        withArena level (moveCurrentFigureRight arena)
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[D&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- left</span>
+        withArena level (moveCurrentFigureLeft arena)
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\n</span><span style="color: #CC3300">&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span>
+        return <span style="color: #336666">()</span>
+      <span style="color: #006699; font-weight: bold">_</span> <span style="color: #000000; font-weight: bold">-&gt;</span> return <span style="color: #336666">()</span>
+</pre></div>
+
+
+      <p>
+The <code>main</code> function creates empty cells, an arena, configures a console, shows an arena and calls <code>withArena</code>.
+<br/>
+Here's a whole code of a <code>Main</code> module's version without a timer:
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #006699; font-weight: bold">module</span> <span style="color: #00CCFF; font-weight: bold">Main</span> <span style="color: #006699; font-weight: bold">where</span> 
+      
+<span style="color: #006699; font-weight: bold">import</span> <span style="color: #00CCFF; font-weight: bold">Arena</span>
+<span style="color: #006699; font-weight: bold">import</span> <span style="color: #00CCFF; font-weight: bold">Level</span>
+<span style="color: #006699; font-weight: bold">import</span> <span style="color: #00CCFF; font-weight: bold">ConsoleView</span>
+<span style="color: #006699; font-weight: bold">import</span> <span style="color: #00CCFF; font-weight: bold">Figure</span> ( <span style="color: #007788; font-weight: bold">Figure</span> (<span style="color: #007788; font-weight: bold">ZShape</span>) )
+<span style="color: #006699; font-weight: bold">import</span> <span style="color: #00CCFF; font-weight: bold">System.IO</span> (<span style="color: #CC00FF">stdin</span>, <span style="color: #CC00FF">hSetEcho</span>, <span style="color: #CC00FF">hSetBuffering</span>, <span style="color: #CC00FF">hReady</span>, <span style="color: #007788; font-weight: bold">BufferMode</span> (<span style="color: #007788; font-weight: bold">NoBuffering</span>) )
+<span style="color: #006699; font-weight: bold">import</span> <span style="color: #00CCFF; font-weight: bold">Control.Monad</span> (<span style="color: #CC00FF">when</span>)
+
+<span style="color: #CC00FF">main</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">IO</span> <span style="color: #336666">()</span>
+<span style="color: #CC00FF">main</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  <span style="color: #006699; font-weight: bold">let</span>
+    emptyCells <span style="color: #000000; font-weight: bold">=</span> take <span style="color: #FF6600">20</span> (repeat (replicate <span style="color: #FF6600">20</span> <span style="color: #007788; font-weight: bold">False</span>))
+    arena <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">Arena</span> (<span style="color: #007788; font-weight: bold">ZShape</span> (<span style="color: #FF6600">15</span>,<span style="color: #FF6600">10</span>) <span style="color: #007788; font-weight: bold">True</span>) emptyCells <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span>
+    level <span style="color: #000000; font-weight: bold">=</span> initlevel
+  hSetBuffering stdin <span style="color: #007788; font-weight: bold">NoBuffering</span>
+  hSetEcho stdin <span style="color: #007788; font-weight: bold">False</span>
+  printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> arena
+  withArena level arena
+
+<span style="color: #CC00FF">withArena</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Level</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Arena</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">IO</span> <span style="color: #336666">()</span>
+<span style="color: #CC00FF">withArena</span> level arena <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> arena
+  key <span style="color: #000000; font-weight: bold">&lt;-</span> getKey
+  when (key <span style="color: #555555">/=</span> <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">&quot;</span>) <span style="color: #555555">$</span> <span style="color: #006699; font-weight: bold">do</span>
+    <span style="color: #006699; font-weight: bold">case</span> key <span style="color: #006699; font-weight: bold">of</span>
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[A&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- up</span>
+        withArena level (rotateCurrentFigureClockwise arena)
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[B&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- down</span>
+        <span style="color: #006699; font-weight: bold">let</span> (newArena, descended) <span style="color: #000000; font-weight: bold">=</span> descendCurrentFigure arena
+        <span style="color: #006699; font-weight: bold">if</span> descended
+        <span style="color: #006699; font-weight: bold">then</span> withArena level newArena
+        <span style="color: #006699; font-weight: bold">else</span> <span style="color: #006699; font-weight: bold">do</span>
+          <span style="color: #006699; font-weight: bold">let</span>
+            fixedFigureArena <span style="color: #000000; font-weight: bold">=</span> fixCurrentFigure newArena
+            (newFigure, newLevel) <span style="color: #000000; font-weight: bold">=</span> nextFigure level
+            newFigureArena <span style="color: #000000; font-weight: bold">=</span> fst <span style="color: #555555">$</span> setFigureIfPossible newFigure fixedFigureArena
+          withArena newLevel newFigureArena
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[C&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- right</span>
+        withArena level (moveCurrentFigureRight arena)
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[D&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- left</span>
+        withArena level (moveCurrentFigureLeft arena)
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\n</span><span style="color: #CC3300">&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span>
+        return <span style="color: #336666">()</span>
+      <span style="color: #006699; font-weight: bold">_</span> <span style="color: #000000; font-weight: bold">-&gt;</span> return <span style="color: #336666">()</span>
+
+<span style="color: #CC00FF">getKey</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">IO</span> [<span style="color: #007788; font-weight: bold">Char</span>]
+<span style="color: #CC00FF">getKey</span> <span style="color: #000000; font-weight: bold">=</span> reverse <span style="color: #555555">&lt;$&gt;</span> getKey&#39; <span style="color: #CC3300">&quot;&quot;</span>
+  <span style="color: #006699; font-weight: bold">where</span>
+  getKey&#39; chars <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+    char <span style="color: #000000; font-weight: bold">&lt;-</span> getChar
+    more <span style="color: #000000; font-weight: bold">&lt;-</span> hReady stdin
+    (<span style="color: #006699; font-weight: bold">if</span> more <span style="color: #006699; font-weight: bold">then</span> getKey&#39; <span style="color: #006699; font-weight: bold">else</span> return) (char<span style="color: #007788; font-weight: bold">:</span>chars)
+</pre></div>
+
+
+      <p class="centered">
+      <a name="concurrency" class="inner-anchor grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </a>
+      </p>
+      <p class="centered">
+Concurrency
+      </p>
+
+      <p>
+Now there's one thing left to do: we need to refactor our single-threaded code into multi-threaded one, in other words, to add a timer into our tetris.
+<br/>
+A timer is supposed to periodically descend the figure.
+      </p>
+
+      <p>
+      One implementation of timer functionality is in module <code>Control.Concurrent.Timer</code> (https://hackage.haskell.org/package/timers-0.2.0.3/docs/Control-Concurrent-Timer.html)
+      </p>
+
+      <p>
+Now we know how to start a timer, but at this point we face some challenges.
+<br/>
+Let's say we started to write a code that the timer will periodically invoke. We can get a new version of an arena from an old version by invoking <code>descendCurrentFigure</code>.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #006699; font-weight: bold">let</span> (newArena, descended) <span style="color: #000000; font-weight: bold">=</span> descendCurrentFigure arena
+</pre></div>
+
+
+      <p>
+The <code>main</code> function invokes <code>withArena</code> function, which then keeps repeatedly calling itself, passing each time a new version of an arena to itself as a parameter.
+<br/>
+How to make a timer interfere with this cycle of recursive calls?
+      </p>
+
+      <p>
+      Imagine that we lined up all the recursive invokations of <code>withArena</code> function and numbered each invokation's arena argument: <code>withArena arena1</code> - <code>withArena arena2</code> - <code>withArena arena3</code> - etc. (let's ignore the <code>level</code> argument for clarity).
+<br/>
+n-th invokation of <code>withArena</code> function receives n-th version of an arena as an input, creates an n+1-th version out of it and passes it as a parameter to the next invokation. We can't change that new version of an arena from the outside.
+      </p>
+
+      <p>
+At this point in our coding journey we are reminded that we are coding in functional style with no side effects and with immutable structures.
+<br/>
+In java a timer could alter some object's state through side effects visible from other threads.
+<br/>
+But haskell challenges us to think about a puzzle.
+<br/>
+(If you know any interesting ways of solving this problem, let us know).
+      </p>
+
+      <p>
+Here we can remember one of the basic patterns of inter-thread communication - queues.
+      </p>
+
+      <p>
+There is indeed an implementation of a concurrent queue in haskell with a neat simple interface (http://hackage.haskell.org/package/base-4.14.0.0/docs/Control-Concurrent-Chan.html).
+<br/>
+There are other implementations available, but I tried to choose the simplest options.
+<br/>
+Creators of that module chose the word channel to describe a queue.
+      </p>
+
+      <p>
+Although a channel is conceptually is a mutable structure, it allows us to design our architecture in such a way that a channel rids domain model structures from mutability, we can gather the mutability in one place, a channel. By the way, it resembles an actor model in that each actor have a queue attached to it.
+      </p>
+
+      <p>
+Now that we have a channel, we don't have to make timer interfere with the cycle of withArena function recursively calling itself, instead we are going to make a timer send a message (a command) to the channel.
+<br/>
+We are going to rewrite the <code>withArena</code> function to make it read commands from the channel and react to them.
+<br/>
+Now, before the changes we are about to make, <code>withArena</code> function has several responsibilities: it shows an arena on the screen, reads button presses and reacts to them.
+<br/>
+Let's divide it into two functions:
+<br/>
+- <code>handleTetrisCommand</code> function will show an arena on a screen and react to commands it got from the channel.
+<br/>
+- <code>keys2commands</code> function will read button presses and send commands to the channel.
+      </p>
+
+      <p>
+These functions must run in two threads at the same time.
+      </p>
+
+      <p>
+      I chose the simplest way of dividing the flow of the program into several threads - a <code>concurrently</code> function from <code>Control.Concurrent.Async</code> module (https://hackage.haskell.org/package/async-2.2.2/docs/Control-Concurrent-Async.html).
+      </p>
+
+      <p>
+<code>TetrisCommand</code> data type represents commands, messages that threads send each other.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #006699; font-weight: bold">data</span> <span style="color: #007788; font-weight: bold">TetrisCommand</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">CmdRotate</span> <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">CmdDescend</span> <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">CmdRight</span> <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">CmdLeft</span> <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">CmdTick</span> <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">CmdPauseOrResume</span>
+</pre></div>
+
+
+      <p>
+A timer periodically performs an action defined in <code>timerTick</code> function, it sends a <code>CmdTick</code> command to the channel.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">timerTick</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Chan</span> <span style="color: #007788; font-weight: bold">TetrisCommand</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">IO</span> <span style="color: #336666">()</span>
+<span style="color: #CC00FF">timerTick</span> chan <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  writeChan chan <span style="color: #007788; font-weight: bold">CmdTick</span>
+</pre></div>
+
+
+      <p>
+The code from the <code>main</code> function that creates a channel and a timer looks like this:
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%">  chan <span style="color: #000000; font-weight: bold">&lt;-</span> newChan
+  timer <span style="color: #000000; font-weight: bold">&lt;-</span> repeatedTimer (timerTick chan) (msDelay <span style="color: #FF6600">300</span>)
+</pre></div>
+
+
+      <p>
+<code>TetrisState</code> data type represents a state of a game, whether it is running or paused.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #006699; font-weight: bold">data</span> <span style="color: #007788; font-weight: bold">TetrisState</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #007788; font-weight: bold">TetrisStateRunning</span> <span style="color: #007788; font-weight: bold">Arena</span> <span style="color: #007788; font-weight: bold">Level</span> (<span style="color: #007788; font-weight: bold">Chan</span> <span style="color: #007788; font-weight: bold">TetrisCommand</span>) <span style="color: #007788; font-weight: bold">TimerIO</span>
+                 <span style="color: #555555">|</span> <span style="color: #007788; font-weight: bold">TetrisStatePaused</span> <span style="color: #007788; font-weight: bold">Arena</span> <span style="color: #007788; font-weight: bold">Level</span> (<span style="color: #007788; font-weight: bold">Chan</span> <span style="color: #007788; font-weight: bold">TetrisCommand</span>)
+</pre></div>
+
+
+      <p>
+<code>keys2commands</code> function reads button presses, translates them to commands, writes commands to the channel, and then recursively calls itself.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">keys2commands</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">Chan</span> <span style="color: #007788; font-weight: bold">TetrisCommand</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">IO</span> <span style="color: #336666">()</span>
+<span style="color: #CC00FF">keys2commands</span> chan <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  key <span style="color: #000000; font-weight: bold">&lt;-</span> getKey
+  when (key <span style="color: #555555">/=</span> <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">&quot;</span>) <span style="color: #555555">$</span> <span style="color: #006699; font-weight: bold">do</span>
+    <span style="color: #006699; font-weight: bold">case</span> key <span style="color: #006699; font-weight: bold">of</span>
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[A&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- up</span>
+        writeChan chan <span style="color: #007788; font-weight: bold">CmdRotate</span>
+        keys2commands chan
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[B&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- down</span>
+        writeChan chan <span style="color: #007788; font-weight: bold">CmdDescend</span>
+        keys2commands chan
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[C&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- right</span>
+        writeChan chan <span style="color: #007788; font-weight: bold">CmdRight</span>
+        keys2commands chan
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\ESC</span><span style="color: #CC3300">[D&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- left</span>
+        writeChan chan <span style="color: #007788; font-weight: bold">CmdLeft</span>
+        keys2commands chan
+      <span style="color: #CC3300">&quot;</span><span style="color: #CC3300; font-weight: bold">\n</span><span style="color: #CC3300">&quot;</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #006699; font-weight: bold">do</span> <span style="color: #0099FF; font-style: italic">-- enter</span>
+        writeChan chan <span style="color: #007788; font-weight: bold">CmdPauseOrResume</span>
+        keys2commands chan
+      <span style="color: #006699; font-weight: bold">_</span> <span style="color: #000000; font-weight: bold">-&gt;</span> return <span style="color: #336666">()</span>
+</pre></div>
+
+
+      <p>
+      <code>handleTetrisCommand</code> function receives a game state and a command as an input, prints an arena and returns a new state of a game (wrapped with <code>IO</code> monad).
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">handleTetrisCommand</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">TetrisState</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">TetrisCommand</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">IO</span> <span style="color: #007788; font-weight: bold">TetrisState</span>
+<span style="color: #CC00FF">handleTetrisCommand</span> tetrisState <span style="color: #007788; font-weight: bold">CmdRotate</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  <span style="color: #006699; font-weight: bold">let</span>
+    arena <span style="color: #000000; font-weight: bold">=</span> getArenaFromState tetrisState
+    newArena <span style="color: #000000; font-weight: bold">=</span> rotateCurrentFigureClockwise arena
+  printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> newArena
+  return <span style="color: #555555">$</span> stateWithNewArena tetrisState newArena
+<span style="color: #CC00FF">handleTetrisCommand</span> tetrisState <span style="color: #007788; font-weight: bold">CmdDescend</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  <span style="color: #006699; font-weight: bold">let</span>
+    arena <span style="color: #000000; font-weight: bold">=</span> getArenaFromState tetrisState
+    (newArena, <span style="color: #006699; font-weight: bold">_</span>) <span style="color: #000000; font-weight: bold">=</span> descendCurrentFigure arena
+  printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> newArena
+  return <span style="color: #555555">$</span> stateWithNewArena tetrisState newArena
+<span style="color: #CC00FF">handleTetrisCommand</span> tetrisState <span style="color: #007788; font-weight: bold">CmdRight</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  <span style="color: #006699; font-weight: bold">let</span>
+    arena <span style="color: #000000; font-weight: bold">=</span> getArenaFromState tetrisState
+    newArena <span style="color: #000000; font-weight: bold">=</span> moveCurrentFigureRight arena
+  printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> newArena
+  return <span style="color: #555555">$</span> stateWithNewArena tetrisState newArena
+<span style="color: #CC00FF">handleTetrisCommand</span> tetrisState <span style="color: #007788; font-weight: bold">CmdLeft</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  <span style="color: #006699; font-weight: bold">let</span>
+    arena <span style="color: #000000; font-weight: bold">=</span> getArenaFromState tetrisState
+    newArena <span style="color: #000000; font-weight: bold">=</span> moveCurrentFigureLeft arena
+  printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> newArena
+  return <span style="color: #555555">$</span> stateWithNewArena tetrisState newArena
+<span style="color: #CC00FF">handleTetrisCommand</span> (<span style="color: #007788; font-weight: bold">TetrisStateRunning</span> arena level chan timer) <span style="color: #007788; font-weight: bold">CmdTick</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  <span style="color: #006699; font-weight: bold">let</span> (newArena, descended) <span style="color: #000000; font-weight: bold">=</span> descendCurrentFigure arena
+  <span style="color: #006699; font-weight: bold">if</span> descended
+  <span style="color: #006699; font-weight: bold">then</span> <span style="color: #006699; font-weight: bold">do</span>
+    printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> newArena
+    return <span style="color: #555555">$</span> <span style="color: #007788; font-weight: bold">TetrisStateRunning</span> newArena level chan timer
+  <span style="color: #006699; font-weight: bold">else</span> <span style="color: #006699; font-weight: bold">do</span>
+    <span style="color: #006699; font-weight: bold">let</span>
+      fixedFigureArena <span style="color: #000000; font-weight: bold">=</span> fixCurrentFigure newArena
+      (newFigure, newLevel) <span style="color: #000000; font-weight: bold">=</span> nextFigure level
+      (newFigureArena, newFigureWasSet) <span style="color: #000000; font-weight: bold">=</span> setFigureIfPossible newFigure fixedFigureArena
+    <span style="color: #006699; font-weight: bold">if</span> newFigureWasSet
+    <span style="color: #006699; font-weight: bold">then</span>
+      <span style="color: #006699; font-weight: bold">if</span> hasFullRows newFigureArena
+        <span style="color: #006699; font-weight: bold">then</span> <span style="color: #006699; font-weight: bold">do</span>
+          printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> fixedFigureArena
+          stopTimer timer
+          <span style="color: #006699; font-weight: bold">let</span> noFullRowsArena <span style="color: #000000; font-weight: bold">=</span> removeFullRows newFigureArena
+          oneShotTimer (writeChan chan <span style="color: #007788; font-weight: bold">CmdPauseOrResume</span>) (msDelay <span style="color: #FF6600">500</span>)
+          return <span style="color: #555555">$</span> <span style="color: #007788; font-weight: bold">TetrisStatePaused</span> noFullRowsArena newLevel chan
+        <span style="color: #006699; font-weight: bold">else</span> <span style="color: #006699; font-weight: bold">do</span>
+          printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> newFigureArena
+          return <span style="color: #555555">$</span> <span style="color: #007788; font-weight: bold">TetrisStateRunning</span> newFigureArena newLevel chan timer
+    <span style="color: #006699; font-weight: bold">else</span> <span style="color: #006699; font-weight: bold">do</span>
+      stopTimer timer
+      return <span style="color: #555555">$</span> <span style="color: #007788; font-weight: bold">TetrisStateRunning</span> newFigureArena newLevel chan timer
+<span style="color: #CC00FF">handleTetrisCommand</span> (<span style="color: #007788; font-weight: bold">TetrisStateRunning</span> arena level chan timer) <span style="color: #007788; font-weight: bold">CmdPauseOrResume</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  stopTimer timer
+  return <span style="color: #555555">$</span> <span style="color: #007788; font-weight: bold">TetrisStatePaused</span> arena level chan
+<span style="color: #CC00FF">handleTetrisCommand</span> (<span style="color: #007788; font-weight: bold">TetrisStatePaused</span> arena level chan) <span style="color: #007788; font-weight: bold">CmdPauseOrResume</span> <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  timer <span style="color: #000000; font-weight: bold">&lt;-</span> repeatedTimer (timerTick chan) (msDelay <span style="color: #FF6600">300</span>)
+  printArena <span style="color: #FF6600">20</span> <span style="color: #FF6600">20</span> arena
+  return <span style="color: #555555">$</span> <span style="color: #007788; font-weight: bold">TetrisStateRunning</span> arena level chan timer
+</pre></div>
+
+
+      <p>
+<code>handleTetrisCommand</code> function is not recursive, you can start the cycle using another recursive function or using the <code>foldM</code> function.
+      </p>
+      <p>
+Recursive function version is in <code>recursive-handle-tetris-commands</code> branch in repo, <code>foldM</code> version is in <code>chan</code> branch.
+      </p>
+      <p>
+We can create the cycle using recursive function that invokes <code>handleTetrisCommand</code> function.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">keepHandlingTetrisCommands</span> <span style="color: #000000; font-weight: bold">::</span> <span style="color: #007788; font-weight: bold">TetrisState</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">Chan</span> <span style="color: #007788; font-weight: bold">TetrisCommand</span> <span style="color: #000000; font-weight: bold">-&gt;</span> <span style="color: #007788; font-weight: bold">IO</span> <span style="color: #336666">()</span>
+<span style="color: #CC00FF">keepHandlingTetrisCommands</span> tetrisState chan <span style="color: #000000; font-weight: bold">=</span> <span style="color: #006699; font-weight: bold">do</span>
+  cmd <span style="color: #000000; font-weight: bold">&lt;-</span> readChan chan
+  newState <span style="color: #000000; font-weight: bold">&lt;-</span> handleTetrisCommand tetrisState cmd
+  keepHandlingTetrisCommands newState chan
+</pre></div>
+
+      <p>
+The <code>main</code> function divides the program's flow of execution to two threads using <code>concurrently</code>:
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">concurrently</span> (keepHandlingTetrisCommands arenaWithLevel chan) (keys2commands chan)
+</pre></div>
+
+      <p>
+Alternatively, instead of using recursive function to cycle you can use <code>foldM</code> that invokes <code>handleTetrisCommand</code> function.
+<br/>
+I wanted to try this method to see the laziness of haskell lists in action.
+      </p>
+
+<!-- HTML generated using hilite.me --><div style="background: #f0f3f3; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><pre style="margin: 0; line-height: 125%"><span style="color: #CC00FF">commands</span> <span style="color: #000000; font-weight: bold">&lt;-</span> getChanContents chan
+<span style="color: #CC00FF">concurrently</span> (foldM handleTetrisCommand arenaWithLevel commands) (keys2commands chan)
+</pre></div>
+
+
+      <p>
+<code>commands</code> is a list of commands extracted from the channel.
+<br/>
+<code>concurrentrly</code> divides the program flow into two threads.
+<br/>
+One of them runs <code>foldM handleTetrisCommand arenaWithLevel commands</code>, the other one runs <code>keys2commands chan</code>.
+      </p>
+
+      <p>
+How does <code>foldM</code> work? It is a monadic version of fold (there is a left fold and a right fold - <code>foldl</code> and <code>foldr</code>). (http://learnyouahaskell.com/higher-order-functions#folds)
+<br/>
+fold resembles the <code>reduce</code> function in javascript.
+      </p>
+
+      <p>
+We extract the commands list from the channel before invoking the function that sends commands to the channel, so you would think that it must be empty.
+<br/>
+If the commands list was empty, then the <code>foldM handleTetrisCommand</code> thread would do nothing, because there are no commands to handle.
+      </p>
+
+      <p>
+It doesn't work that way because the laziness of haskell lists: you can create lists that are not fully constructed yet and to add items later. You can even create infinite lists.
+      </p>
+
+      <p class="centered">
+      <a name="conclusions" class="inner-anchor grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </a>
+      </p>
+      <p class="centered">
+Conclusions
+      </p>
+
+      <p>
+Thinking about abstract things lead to a dead-end. It was the case of dealing with unknown unknowns, when you don't know what you don't know, so you don't know what to think about and what is the next step.
+<br/>
+One of the branches of that way was "learning libraries" with no connection to anything tangible.
+      </p>
+
+      <p>
+Results were achieved by going from concrete to abstract.
+      </p>
+
+      <p>
+One of the reasons was that I had a wrong impression about a language that it was purely functional, that it was impossible to write imperative code in haskell. That's why I wanted to learn a purely functional language: I couldn't imagine how would one design and organize compicated and intertwined code using only functions and immutable objects. Also I heard about reactive streams, that also influenced the impression.
+      </p>
+
+      <p>
+      It turns out haskell is not so strict as I thought when it comes to functional style. For example, a <code>writeChan</code> function from <code>Control.Concurrent.Chan</code> module: it's result is wrapped with <code>IO</code> monad, it gives us a clue that we are not dealing with a pure function, but even conceptually this function is imperative by design, it behaves like an imperative void method. I thought that in haskell world a channel would return a new version of itself like all well-behaved immutable structures and then there would be some tricky way of propagating that new version to the recipient, but it turns out that things are much simpler.
+      </p>
+
+      <p>
+Now I know that all that esoteric functional stuff I expected to be forced to use in haskell (like category theory, lenses, reactive streams, iteratees, etc.) is not built into the language, but implemented in libraries, and as a last resort you can just write imperative code or imperatively use entities which are mutable by design (like channels).
+      </p>
+
+      <p>
+Haskell allows to write both functional and imperative code, one ways in which Haskell is special is that it sets the boundaries between them on the level of types.
+<br/>
+Maybe purely functional languages don't exist.
+      </p>
+
+      <p class="centered">
+      <a name="whats-next" class="inner-anchor grey">
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      </a>
+      </p>
+      <p class="centered">
+What's next?
+      </p>
+
+      <p>
+what part of code is pure functional and what part is not pure?
+<br/>
+In this project we can find pure functions in modules that describe models.
+      </p>
+
+      <p>
+idk what all these functions do: <code>atomically</code>, <code>forkIO</code>, <code>readTVar</code>, <code>writeTVar</code>, <code>readTMVar</code>, <code>putTMVar</code> in examples from "Haskell by Example: Timers" (https://lotz84.github.io/haskellbyexample/ex/timers)
+      </p>
+
+      <p>
+exit game functionality is not implemented yet, one way of exiting game is through interrupting the console
+<br/>
+optimize changing values in cells matrix
+<br/>
+how to introduce more functional stuff into code, like monads, monad transformers, etc.?
+      </p>
+
+      </p>
+
+    </div>
+    <div class="github-comments">
+      <h2>Comments</h2>
+      <ul id="gh-comments-list"></ul>
+      <p id="no-comments-found">No comments found for this article.</p>
+      <p id="loading-comments">Loading comments...</p>
+      <p id="next-comments-page">next comments page</p>
+      <p id="leave-a-comment">Join the discussion for this article on <a href="https://github.com/shiraeeshi/shiraeeshi.github.io/issues/1">this ticket</a>. Comments appear on this page instantly.</p>
+    </div>
+  </body>
+
+
+
+
+
+
+  <script>
+
+const GH_API_URL = 'https://api.github.com/repos/shiraeeshi/shiraeeshi.github.io/issues/1/comments'; // ?client_id={{ site.data.settings.gh_api.ci }}&client_secret={{ site.data.settings.gh_api.cs }}
+
+let commentsLoader = new CommentsLoader(GH_API_URL);
+
+document.getElementById( 'next-comments-page' ).addEventListener('click', function() {
+  commentsLoader.loadNextPage();
+});
+
+commentsLoader.loadComments();
+
+  </script>
+
+
+
+
+</html>
