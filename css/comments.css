@@ -28,6 +28,7 @@
 }
 #gh-comments-list li .comment-content {
     padding: 0 1.5em;
+    flex: 1;
 }
 #gh-comments-list li>a.user img {
     max-width: 100%;
