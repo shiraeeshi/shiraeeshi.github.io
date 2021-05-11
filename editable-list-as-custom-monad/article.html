@@ -55,7 +55,10 @@ img.diagram.with-pointer {
     </style>
 
     <link rel="stylesheet" href="page-style.css">
+    <link rel="stylesheet" href="comments.css">
     <script type="text/javascript" src="interactive-project-navigation.js"></script>
+    <script type="text/javascript" src="showdown-1.9.1.min.js"></script>
+    <script type="text/javascript" src="comments.js"></script>
 </head>
 <body>
     <div class="row">
@@ -2040,6 +2043,15 @@ The FreerProgram module:
 
 
 
+    <div class="github-comments">
+      <h2>Comments</h2>
+      <ul id="gh-comments-list"></ul>
+      <p id="no-comments-found">No comments found for this article.</p>
+      <p id="loading-comments">Loading comments...</p>
+      <p id="next-comments-page">next comments page</p>
+      <p id="leave-a-comment">Join the discussion for this article on <a href="https://github.com/shiraeeshi/shiraeeshi.github.io/issues/3">this ticket</a>. Comments appear on this page instantly.</p>
+    </div>
+
 
 
     </div> <!-- end of column left -->
@@ -3603,4 +3615,23 @@ The FreerProgram module:
 
 
 </body>
+
+
+
+
+
+
+  <script>
+
+const GH_API_URL = 'https://api.github.com/repos/shiraeeshi/shiraeeshi.github.io/issues/3/comments'; // ?client_id={{ site.data.settings.gh_api.ci }}&client_secret={{ site.data.settings.gh_api.cs }}
+
+let commentsLoader = new CommentsLoader(GH_API_URL);
+
+document.getElementById( 'next-comments-page' ).addEventListener('click', function() {
+  commentsLoader.loadNextPage();
+});
+
+commentsLoader.loadComments();
+
+  </script>
 </html>
